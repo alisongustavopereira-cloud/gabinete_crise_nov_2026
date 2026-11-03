@@ -162,11 +162,18 @@ table.alerts .acts{white-space:nowrap;font-size:16px}
 table.alerts .acts a{text-decoration:none;margin-right:6px}
 
 #map{position:relative}
-#map::after{content:"Segure Ctrl (ou ⌘ no Mac) e role o mouse para dar zoom";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#fff;font:600 15px var(--sans);text-align:center;padding:20px;z-index:800;opacity:0;pointer-events:none;transition:opacity .2s}
-#map.hint::after{opacity:1}
+
 :root[data-theme="dark"] .leaflet-tile{filter:brightness(.85) contrast(1.05)}
 :root[data-theme="dark"] .leaflet-popup-content-wrapper,:root[data-theme="dark"] .leaflet-popup-tip{background:#161d26;color:#e8edf3}
 :root[data-theme="dark"] .leaflet-popup-content .pp a,:root[data-theme="dark"] .leaflet-popup-content .pp button{background:#1c2530;color:#5aa6ea;border-color:#2a3340}
+
+#map:focus{outline:2px solid var(--accent)}
+.octip{font:600 11px var(--sans);padding:2px 6px;border-radius:5px;border:0;box-shadow:0 1px 3px rgba(0,0,0,.35);color:#fff;background:#444}
+.octip.critica{background:#b3261e} .octip.alta{background:#d9640d} .octip.media{background:#c79a00;color:#1d1600} .octip.baixa{background:#2e7d4f}
+.octip.done{opacity:.55}
+.octip.leaflet-tooltip-top:before{border-top-color:inherit;display:none}
+
+#backmap{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:35;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 </style>
 </head>
 <body>
@@ -287,7 +294,7 @@ function card(o){
     <div class="os"><b>${esc(o.org)}</b> — ${esc(o.os)}</div>
     ${o.risco?`<div class="risk">⚠︎ ${esc(o.risco)}</div>`:''}
     <div class="thumbs">${thumbs}</div>
-    <div class="links">${o.lat?`<a class="mapbtn" data-map="${o.id}">🗺 Ver no mapa${o.approx?' (aprox.)':''}</a>`:''}<a href="${navUrl(o)}" target="_blank" rel="noopener">🧭 Navegar</a>${maplink}${tm}<a data-copy="${o.id}" href="#" title="Copiar a OS formatada">💬 Copiar OS</a><a href="${waLink(osText(o))}" target="_blank" rel="noopener">📲 WhatsApp</a></div>
+    <div class="links">${o.lat?`<a class="mapbtn" data-map="${o.id}">🗺 Ver no mapa${o.approx?' (aprox.)':''}</a>`:''}<a class="mapbtn" data-tomap="1">⬆ Voltar ao mapa</a><a href="${navUrl(o)}" target="_blank" rel="noopener">🧭 Navegar</a>${maplink}${tm}<a data-copy="${o.id}" href="#" title="Copiar a OS formatada">💬 Copiar OS</a><a href="${waLink(osText(o))}" target="_blank" rel="noopener">📲 WhatsApp</a></div>
     ${fieldBar(o)}
     ${evStrip(o)}
     <div class="edit"><div class="${changed?'changed':''}"><label>Status</label><select data-k="s" data-id="${o.id}">${STATUSES.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('')}</select></div>
@@ -337,7 +344,7 @@ function renderAll(){
     <div id="mode" class="notice">${canWrite ? '<b>Modo edição.</b> Altere Status / Equipe / Observação direto nos cartões — cada alteração é gravada na hora e aparece para todos (atualização automática a cada 30 s).' : '<b>Modo leitura.</b> Para atualizar status, clique em <b>Entrar para editar</b> e informe o PIN do gabinete e seu nome. Os dados são atualizados automaticamente a cada 30 s.'}<span id="sync" style="margin-left:8px"></span></div>
     <h2>Indicadores de urgência</h2>${renderKpis()}
     <h2>Panorama</h2>${renderCharts()}
-    <h2>Mapa (OpenStreetMap)</h2><div class="card"><div class="maptools"><button class="btn" id="mapbig">⛶ Ampliar mapa</button><button class="btn" id="mapfit">🎯 Ver todos os pontos</button><span style="font-size:12px;color:var(--muted)">Zoom: botões +/−, pinça no celular, <b>Ctrl</b> (ou <b>⌘</b> no Mac) + rolagem do mouse, duplo clique · clique no ponto para abrir a ocorrência ao lado</span></div><div class="maprow"><div id="map"></div><aside id="mapside" class="mapside"><div class="empty">Clique em um ponto do mapa para ver a ocorrência aqui e encaminhar pelo WhatsApp.</div></aside></div><div class="legend"><span><i style="background:var(--crit);border-radius:50%"></i>Crítica</span><span><i style="background:var(--alta);border-radius:50%"></i>Alta</span><span><i style="background:var(--media);border-radius:50%"></i>Média</span><span><i style="background:var(--baixa);border-radius:50%"></i>Baixa</span><span>contorno tracejado = posição aproximada (rua) · apagado = concluído</span></div></div>
+    <h2>Mapa (OpenStreetMap)</h2><div class="card"><div class="maptools"><button class="btn" id="mapbig">⛶ Ampliar mapa</button><button class="btn" id="mapfit">🎯 Ver todos os pontos</button><span style="font-size:12px;color:var(--muted)">Dentro do mapa: roda do mouse ou teclas <b>+</b>/<b>−</b> dão zoom, setas movem, pinça no celular · aproximando (zoom 15+) aparece o número de cada ocorrência · clique no ponto para abrir ao lado e enviar no WhatsApp</span></div><div class="maprow"><div id="map"></div><aside id="mapside" class="mapside"><div class="empty">Clique em um ponto do mapa para ver a ocorrência aqui e encaminhar pelo WhatsApp.</div></aside></div><div class="legend"><span><i style="background:var(--crit);border-radius:50%"></i>Crítica</span><span><i style="background:var(--alta);border-radius:50%"></i>Alta</span><span><i style="background:var(--media);border-radius:50%"></i>Média</span><span><i style="background:var(--baixa);border-radius:50%"></i>Baixa</span><span>contorno tracejado = posição aproximada (rua) · apagado = concluído</span></div></div>
     <h2>Últimas atualizações do gabinete</h2><div class="card" id="logbox">${renderLog()}</div>
     <h2>Alerta imediato — ordem de despacho sugerida</h2><div class="card" id="alerts">${renderAlerts()}</div>
     <h2>Ocorrências (${D.occs.length})</h2>
@@ -371,15 +378,11 @@ let MAP = null, MARK = {};
 function initMap(){
   if(!window.L) return;
   const pts = D.occs.filter(o=>o.lat);
-  MAP = L.map('map', {scrollWheelZoom:false, zoomControl:true});
+  MAP = L.map('map', {scrollWheelZoom:true, keyboard:true, keyboardPanDelta:80, zoomControl:true, zoomSnap:0.5, wheelPxPerZoomLevel:80});
   L.control.scale({imperial:false}).addTo(MAP);
-  // rolagem do mouse dá zoom só com Ctrl/⌘ pressionado (sem a tecla, a página continua rolando normalmente)
-  const mapEl = document.getElementById('map'); let hintT = null;
-  mapEl.addEventListener('wheel', e => {
-    if(e.ctrlKey || e.metaKey){ if(!MAP.scrollWheelZoom.enabled()) MAP.scrollWheelZoom.enable(); mapEl.classList.remove('hint'); }
-    else { if(MAP.scrollWheelZoom.enabled()) MAP.scrollWheelZoom.disable(); mapEl.classList.add('hint'); clearTimeout(hintT); hintT = setTimeout(()=>mapEl.classList.remove('hint'), 1200); }
-  }, {passive:true, capture:true});
-  mapEl.addEventListener('mouseleave', () => { if(MAP.scrollWheelZoom.enabled()) MAP.scrollWheelZoom.disable(); });
+  // dentro do mapa: roda do mouse = zoom; teclado = + / − para zoom e setas para mover (o mapa recebe o foco ao passar o mouse)
+  const mapEl = document.getElementById('map');
+  mapEl.addEventListener('mouseenter', () => { const ae = document.activeElement; if(!(ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))) MAP.getContainer().focus({preventScroll:true}); });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(MAP);
   const col = {'Crítica':'#b3261e','Alta':'#d9640d','Média':'#c79a00','Baixa':'#2e7d4f'};
   pts.forEach(o => {
@@ -388,13 +391,21 @@ function initMap(){
     m.on('click', () => openSide(o.id));
     MARK[o.id] = m;
   });
+  const LABEL_ZOOM = 15;
+  const setLabels = () => { const on = MAP.getZoom() >= LABEL_ZOOM; D.occs.forEach(o => { const m = MARK[o.id]; if(!m) return; if(m._lblOn === on) return; m._lblOn = on; m.unbindTooltip(); m.bindTooltip(on ? `<b>${o.id.replace('OC-','')}</b>` : `<b>${o.id}</b> ${esc(o.end.slice(0,48))}`, {permanent:on, direction:'top', offset:[0,-6], opacity:0.95, className:'octip ' + o.p.replace('í','i').replace('é','e').toLowerCase() + (isDone(o)?' done':'')}); }); };
+  MAP.on('zoomend', setLabels); setLabels();
+  // botão flutuante para voltar ao mapa quando ele sai da tela (ex.: depois de abrir a ficha completa)
+  let back = document.getElementById('backmap');
+  if(!back){ back = document.createElement('button'); back.id = 'backmap'; back.className = 'btn primary'; back.textContent = '🗺 Voltar ao mapa'; back.hidden = true; document.body.appendChild(back);
+    back.addEventListener('click', () => { document.getElementById('map').scrollIntoView({behavior:'smooth', block:'center'}); if(SIDE_ID) openSide(SIDE_ID); }); }
+  if('IntersectionObserver' in window){ new IntersectionObserver(es => { es.forEach(en => { back.hidden = en.isIntersecting || window.scrollY < 50; }); }, {threshold:0.05}).observe(mapEl); }
   const fit = () => { if(pts.length) MAP.fitBounds(L.latLngBounds(pts.map(o=>[o.lat,o.lon])).pad(0.08)); };
   const bigBtn = document.getElementById('mapbig'); if(bigBtn) bigBtn.addEventListener('click', () => { const el = document.getElementById('map'); el.classList.toggle('big'); bigBtn.textContent = el.classList.contains('big') ? '⛶ Reduzir mapa' : '⛶ Ampliar mapa'; setTimeout(()=>MAP.invalidateSize(), 50); });
   const fitBtn = document.getElementById('mapfit'); if(fitBtn) fitBtn.addEventListener('click', fit);
   if(SIDE_ID) openSide(SIDE_ID);
   if(pts.length) MAP.fitBounds(L.latLngBounds(pts.map(o=>[o.lat,o.lon])).pad(0.08));
 }
-function refreshMarkers(){ if(!MAP) return; D.occs.forEach(o => { const m = MARK[o.id]; if(m){ m.setStyle({fillOpacity: isDone(o)?0.15:0.75, opacity: isDone(o)?0.4:1}); } }); }
+function refreshMarkers(){ if(!MAP) return; D.occs.forEach(o => { const m = MARK[o.id]; if(m){ m.setStyle({fillOpacity: isDone(o)?0.15:0.75, opacity: isDone(o)?0.4:1}); m._lblOn = undefined; } }); MAP.fire('zoomend'); }
 function showOnMap(id){ const m = MARK[id]; if(!m || !MAP) return; document.getElementById('map').scrollIntoView({behavior:'smooth', block:'center'}); MAP.setView(m.getLatLng(), 17); openSide(id); }
 
 function openSide(id){
@@ -409,7 +420,7 @@ function openSide(id){
     <div class="os"><b>${esc(o.org)}</b> — ${esc(o.os)}</div>
     ${o.risco?`<div class="risk">⚠︎ ${esc(o.risco)}</div>`:''}
     <div class="thumbs">${thumbs}</div>
-    <div class="links"><a class="btn primary" href="${waLink(osText(o))}" target="_blank" rel="noopener">📲 Encaminhar no WhatsApp</a><a data-copy="${o.id}" href="#">💬 Copiar OS</a><a href="${navUrl(o)}" target="_blank" rel="noopener">🧭 Navegar</a>${o.gm?`<a href="${o.gm}" target="_blank" rel="noopener">Google Maps</a>`:''}<a href="#${o.id}">📄 Ficha completa</a></div>
+    <div class="links"><a class="btn primary" href="${waLink(osText(o))}" target="_blank" rel="noopener">📲 Encaminhar no WhatsApp</a><a data-copy="${o.id}" href="#">💬 Copiar OS</a><a href="${navUrl(o)}" target="_blank" rel="noopener">🧭 Navegar</a>${o.gm?`<a href="${o.gm}" target="_blank" rel="noopener">Google Maps</a>`:''}<a href="#${o.id}" data-fromap="1">📄 Ficha completa</a></div>
     ${fieldBar(o)}
     ${canWrite ? `<div class="edit"><div><label>Status</label><select data-k="s" data-id="${o.id}">${STATUSES.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('')}</select></div><div><label>Equipe designada</label><input data-k="e" data-id="${o.id}" value="${esc(r.e||'')}" placeholder="ex.: SEINFRA motosserra 2"></div></div>` : ''}
   </article>`;
@@ -448,7 +459,7 @@ function wire(){
     const c = e.target.closest('a[data-copy]'); if(c){ e.preventDefault(); const o = D.occs.find(x=>x.id===c.dataset.copy); copyText(osText(o)).then(ok => toast(ok ? 'OS copiada — cole no WhatsApp da equipe.' : 'Não deu para copiar automaticamente; use o botão WhatsApp.')); return; }
     const b = e.target.closest('button[data-act]'); if(b){ e.preventDefault(); fieldAction(b.dataset.act, b.dataset.id); }
   }));
-  ['list','mapside'].forEach(cid => document.getElementById(cid).addEventListener('click', e => { const a = e.target.closest('a[data-lb]'); if(a){ e.preventDefault(); openLb(a.dataset.lb, +a.dataset.i); return; } const mb = e.target.closest('a[data-map]'); if(mb){ e.preventDefault(); showOnMap(mb.dataset.map); } }));
+  ['list','mapside'].forEach(cid => document.getElementById(cid).addEventListener('click', e => { const a = e.target.closest('a[data-lb]'); if(a){ e.preventDefault(); openLb(a.dataset.lb, +a.dataset.i); return; } const mb = e.target.closest('a[data-map]'); if(mb){ e.preventDefault(); showOnMap(mb.dataset.map); return; } const tm = e.target.closest('a[data-tomap]'); if(tm){ e.preventDefault(); document.getElementById('map').scrollIntoView({behavior:'smooth', block:'center'}); } }));
 }
 
 const timers = {};
