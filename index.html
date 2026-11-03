@@ -227,6 +227,21 @@ table.varr .bar i{display:block;height:100%;background:var(--ok)}
 .street .ocs .chip,table.cross .chip{font-size:10.5px;padding:1px 6px;text-decoration:none;margin-right:2px}
 .tchip{display:inline-flex;gap:4px;align-items:center;border:1px solid;border-radius:999px;padding:1px 8px;font-size:12px} .tchip i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .tblwrap{overflow-x:auto}
+
+.fsctl a{font-size:18px;line-height:30px;width:30px;height:30px;text-align:center;font-weight:700}
+.maprow.mapfull{position:fixed;inset:0;z-index:60;background:var(--bg);margin:0;gap:0;grid-template-columns:1fr 380px;align-items:stretch;height:100vh;height:100dvh}
+.maprow.mapfull #map{height:100vh;height:100dvh;border-radius:0;border:0}
+.maprow.mapfull .mapside{height:100vh;height:100dvh;max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);padding-top:calc(8px + env(safe-area-inset-top,0px))}
+.maprow.mapfull .mapside:has(> .empty){display:none}
+.maprow.mapfull:has(.mapside > .empty){grid-template-columns:1fr}
+body.mapfull-on{overflow:hidden}
+#mapfsback{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:61;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+@media (max-width:900px){
+  .maprow.mapfull{grid-template-columns:1fr;grid-template-rows:1fr auto}
+  .maprow.mapfull #map{height:100dvh}
+  .maprow.mapfull:has(.mapside > :not(.empty)) #map{height:58dvh}
+  .maprow.mapfull:has(.mapside > :not(.empty)) .mapside{height:42dvh;border-left:0;border-top:1px solid var(--line);padding-top:8px}
+}
 </style>
 </head>
 <body>
@@ -479,7 +494,25 @@ function initMap(){
   if(pts.length) MAP.fitBounds(L.latLngBounds(pts.map(o=>[o.lat,o.lon])).pad(0.08));
   wireMapFilters(); applyMapFilter(false);
   LAY.ruas = LAY.trails = LAY.me = null; if(LAY.on) drawSweepLayers();
+  // botão de tela cheia dentro do mapa (canto inferior direito)
+  const FS = L.control({position:'bottomright'});
+  FS.onAdd = function(){ const d = L.DomUtil.create('div', 'leaflet-bar fsctl'); const a = L.DomUtil.create('a', '', d); a.href = '#'; a.id = 'mapfs'; a.title = 'Tela cheia (ver com mais precisão)'; a.setAttribute('role', 'button'); a.setAttribute('aria-label', 'Tela cheia'); a.innerHTML = '⛶'; L.DomEvent.on(a, 'click', e => { L.DomEvent.stop(e); toggleMapFull(); }); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d); return d; };
+  FS.addTo(MAP);
 }
+function isMapFull(){ const row = document.querySelector('.maprow'); return !!(row && row.classList.contains('mapfull')); }
+function toggleMapFull(force){
+  const row = document.querySelector('.maprow'); if(!row) return;
+  const on = typeof force === 'boolean' ? force : !row.classList.contains('mapfull');
+  row.classList.toggle('mapfull', on); document.body.classList.toggle('mapfull-on', on);
+  let back = document.getElementById('mapfsback');
+  if(on){ if(!back){ back = document.createElement('button'); back.id = 'mapfsback'; back.className = 'btn primary'; back.innerHTML = '◀ Voltar ao painel'; back.title = 'Sair da tela cheia (Esc)'; back.addEventListener('click', () => toggleMapFull(false)); row.appendChild(back); } const fs = document.getElementById('mapfs'); if(fs){ fs.innerHTML = '✕'; fs.title = 'Sair da tela cheia'; } }
+  else { if(back) back.remove(); const fs = document.getElementById('mapfs'); if(fs){ fs.innerHTML = '⛶'; fs.title = 'Tela cheia (ver com mais precisão)'; } }
+  if(MAP){ setTimeout(() => { MAP.invalidateSize(); }, 60); setTimeout(() => { MAP.invalidateSize(); }, 350); }
+  if(!on){ const map = document.getElementById('map'); if(map) map.scrollIntoView({block:'center'}); }
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && isMapFull()) toggleMapFull(false); });
+// em tela cheia, abrir a ficha completa (ou qualquer link interno) sai da tela cheia primeiro
+document.addEventListener('click', e => { if(!isMapFull()) return; const a = e.target.closest('#mapside a[href^="#OC"]'); if(a) toggleMapFull(false); }, true);
 function refreshMarkers(){ if(!MAP) return; D.occs.forEach(o => { const m = MARK[o.id]; if(m){ m.setStyle({fillOpacity: isDone(o)?0.15:0.75, opacity: isDone(o)?0.4:1}); m._lblOn = undefined; } }); MAP.fire('zoomend'); }
 function showOnMap(id){ const m = MARK[id]; if(!m || !MAP) return; document.getElementById('map').scrollIntoView({behavior:'smooth', block:'center'}); MAP.setView(m.getLatLng(), 17); openSide(id); }
 
